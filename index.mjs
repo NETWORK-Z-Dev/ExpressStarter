@@ -90,8 +90,8 @@ export default class ExpressStarter {
         if(!fs.existsSync(publicWebDir)) fs.mkdirSync(publicWebDir, {recursive: true});
         let templateExtensions = ['.html', '.js']
 
-        const renderTemplate = async (template, query) => {
-            const {group, category, channel} = query;
+        const renderTemplate = async (template, req) => {
+            let query = req.query;
 
             let placeholders = [
                 ["version", () => this.version],
@@ -100,13 +100,13 @@ export default class ExpressStarter {
 
             // merge with custom ones
             if(getPlaceholders){
-                let customPlaceholderArray = await getPlaceholders(query);
+                let customPlaceholderArray = await getPlaceholders(req);
                 placeholders = ArrayTools.merge(placeholders, customPlaceholderArray);
             }
 
             // merge with custom ones
             if(getExtensions){
-                let customExtensionsArray = await getExtensions(query);
+                let customExtensionsArray = await getExtensions(req);
                 templateExtensions = ArrayTools.merge(templateExtensions, customExtensionsArray);
             }
 
@@ -127,7 +127,7 @@ export default class ExpressStarter {
             fs.readFile(fullPath, 'utf8', async (err, content) => {
                 if (err) return next();
 
-                const rendered = await renderTemplate(content, req.query);
+                const rendered = await renderTemplate(content, req);
                 const contentType = {
                     '.html': 'text/html',
                     '.js': 'application/javascript',
