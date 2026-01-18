@@ -25,5 +25,5 @@ You can access important parts of the library directly as well, like `starter.ap
 
 ## Additional Docs
 
-- [Extending templates](/docs/Template System.md)
+- [Extending templates](./docs/Template%20System.md)
 
