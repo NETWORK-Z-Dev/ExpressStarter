@@ -7,13 +7,18 @@ import {fileURLToPath} from "url";
 import http from "http";
 
 import Logger from "@hackthedev/terminal-logger"
+import ArrayTools from "@hackthedev/arraytools"
 
 export default class ExpressStarter {
     constructor() {
+        console.clear();
         this.version = 1
         this.debug = false
         this.dirname = process.cwd();
         this.app = express();
+
+        process.stdin.resume();
+        process.stdin.setEncoding("utf8");
     }
 
     registerErrorHandlers(){
@@ -49,26 +54,18 @@ export default class ExpressStarter {
         this.version = version
     }
 
-
-
     startHttpServer(port, onStarted = null){
-        Logger.info("Starting HTTP Server on port " + port);
+        Logger.warn("Starting HTTP Server on port " + port);
 
         this.server = http.createServer(this.app);
         this.server.listen(port, async function () {
-            Logger.info("Server is running on port " + port);
+            Logger.success("Server is running on port " + port);
             if(onStarted) await onStarted();
-        }
+        })
     }
 
     getStartupArgs() {
-        // handle startup args
-        let nodeArgs = process.argv;
-
-        // remove the first few arguments because fuck that lol
-        nodeArgs.shift();
-        nodeArgs.shift();
-        return nodeArgs;
+        return process.argv.slice(2);
     }
 
     async getLatestVersion(repo){
@@ -76,39 +73,41 @@ export default class ExpressStarter {
 
         return new Promise(async (resolve, reject) => {
             var versionUrl = `https://raw.githubusercontent.com/${repo}/main/version`;
-
-            const res = await fetch(versionUrl)
-
-            if (res.status == 404) {
-                resolve(null);
-            } else if (res.status == 200) {
-                var onlineVersionCode = await res.text();
-                onlineVersionCode = onlineVersionCode.replaceAll("\n\r", "").replaceAll("\n", "");
-                resolve(onlineVersionCode);
-            } else {
-                resolve(null);
-            }
+            const res = await fetch(versionUrl);
+            if (res.status !== 200) return null;
+            resolve((await res.text()).trim());
         });
     }
 
     registerTemplateMiddleware({
-                                   publicWebDir = path.join(this.dirname, "public"),
-                                   templateExtensions = ['.html', '.js'],
-                                   onRender = null,
+                                   publicWebDir = null,
+                                   getExtensions = null,
                                    getPlaceholders = null
-                               }) {
+                               } = {}) {
 
-        async function renderTemplate(template, query) {
+        // set defaults
+        if(!publicWebDir) publicWebDir = path.join(this.dirname, "public")
+        if(!fs.existsSync(publicWebDir)) fs.mkdirSync(publicWebDir, {recursive: true});
+        let templateExtensions = ['.html', '.js']
+
+        const renderTemplate = async (template, query) => {
             const {group, category, channel} = query;
 
             let placeholders = [
                 ["version", () => this.version],
             ];
 
+
             // merge with custom ones
             if(getPlaceholders){
                 let customPlaceholderArray = await getPlaceholders(query);
                 placeholders = ArrayTools.merge(placeholders, customPlaceholderArray);
+            }
+
+            // merge with custom ones
+            if(getExtensions){
+                let customExtensionsArray = await getExtensions(query);
+                templateExtensions = ArrayTools.merge(templateExtensions, customExtensionsArray);
             }
 
             return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (match, key) => {
