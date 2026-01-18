@@ -20,3 +20,10 @@ Its possible to customize many aspects of the this small library and comes with 
 - Check latest version from github file
 
 You can access important parts of the library directly as well, like `starter.app`, `starter.server` and `starter.http` as in this example.
+
+------
+
+## Additional Docs
+
+- [Extending templates](./docs/Template System.md)
+
