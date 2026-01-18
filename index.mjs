@@ -16,6 +16,7 @@ export default class ExpressStarter {
         this.debug = false
         this.dirname = process.cwd();
         this.app = express();
+        this.express = express;
 
         process.stdin.resume();
         process.stdin.setEncoding("utf8");
@@ -79,6 +80,18 @@ export default class ExpressStarter {
         });
     }
 
+    generateId(length) {
+        let result = '1';
+        const characters = '0123456789';
+        const charactersLength = characters.length;
+        let counter = 0;
+        while (counter < length - 1) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+            counter += 1;
+        }
+        return result;
+    }
+
     registerTemplateMiddleware({
                                    publicWebDir = null,
                                    getExtensions = null,
@@ -95,6 +108,7 @@ export default class ExpressStarter {
 
             let placeholders = [
                 ["version", () => this.version],
+                ["random", () => this.generateId(12)],
             ];
 
 
