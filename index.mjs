@@ -17,6 +17,7 @@ export default class ExpressStarter {
         this.dirname = process.cwd();
         this.app = express();
         this.express = express;
+        this.http = http;
 
         process.stdin.resume();
         process.stdin.setEncoding("utf8");

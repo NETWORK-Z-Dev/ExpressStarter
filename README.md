@@ -6,16 +6,16 @@ This library's purpose is to get rid of the default structure you usually need a
 import ExpressStarter from "/mnt/SSD/network-z-dev/ExpressStarter/index.mjs"
 let starter = new ExpressStarter()
 
-starter.registerErrorHandlers();
-starter.registerTemplateMiddleware();
+starter.registerErrorHandlers(); // avoid crashing and enable error logging
+starter.registerTemplateMiddleware(); // cool template engine
 
-starter.app.use(
+starter.app.use( // serve statc files
     starter.express.static(
         starter.dirname + "/public",
     ),
 );
 
-starter.startHttpServer(5000)
+starter.startHttpServer(5000) // begin listening on whatever port
 ```
 
 Its possible to customize many aspects of the this small library and comes with some pretty cool default features:
