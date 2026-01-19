@@ -1,6 +1,6 @@
 {
   "name": "@hackthedev/express-starter",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "This library's purpose is to get rid of the default structure you usually need and create when trying to get an express server up and running in NodeJS. It works so well in fact that you can get a server up and running with only a few lines of code, as many default variables will handle the most basic setup.",
   "homepage": "https://github.com/NETWORK-Z-Dev/ExpressStarter#readme",
   "bugs": {
