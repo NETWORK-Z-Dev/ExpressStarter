@@ -9,7 +9,6 @@ import ArrayTools from "@hackthedev/arraytools"
 
 export default class ExpressStarter {
     constructor() {
-        console.clear();
         this.version = 1
         this.debug = false
         this.dirname = process.cwd();
