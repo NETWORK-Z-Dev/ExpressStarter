@@ -54,7 +54,7 @@ export default class ExpressStarter {
     }
 
     startHttpServer(port, onStarted = null){
-        Logger.warn("Starting HTTP Server on port " + port);
+        Logger.info("Starting HTTP Server on port " + port);
 
         this.server = http.createServer(this.app);
         this.server.listen(port, async function () {
