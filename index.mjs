@@ -2,8 +2,6 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import {Server} from "socket.io";
-import {fileTypeFromBuffer} from "file-type";
-import {fileURLToPath} from "url";
 import http from "http";
 
 import Logger from "@hackthedev/terminal-logger"
