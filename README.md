@@ -8,13 +8,7 @@ let starter = new ExpressStarter()
 
 starter.registerErrorHandlers(); // avoid crashing and enable error logging
 starter.registerTemplateMiddleware(); // cool template engine
-
-starter.app.use( // serve statc files
-    starter.express.static(
-        starter.dirname + "/public",
-    ),
-);
-
+starter.app.use(starter.express.static(starter.dirname + "/public")); // serve statc files
 starter.startHttpServer(5000) // begin listening on whatever port
 ```
 
