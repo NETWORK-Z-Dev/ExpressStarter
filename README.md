@@ -3,7 +3,7 @@
 This library's purpose is to get rid of the default structure you usually need and create when trying to get an express server up and running in NodeJS. It works so well in fact that you can get a server up and running with only a few lines of code, as many default variables will handle the most basic setup.
 
 ```js
-import ExpressStarter from "/mnt/SSD/network-z-dev/ExpressStarter/index.mjs"
+import ExpressStarter from "@hackthedev/express-starter"
 let starter = new ExpressStarter()
 
 starter.registerErrorHandlers(); // avoid crashing and enable error logging
