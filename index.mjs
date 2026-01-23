@@ -109,17 +109,9 @@ export default class ExpressStarter {
                 ["random", () => this.generateId(12)],
             ];
 
-
-            // merge with custom ones
-            if(getPlaceholders){
+            if (getPlaceholders) {
                 let customPlaceholderArray = await getPlaceholders(req);
                 placeholders = ArrayTools.merge(placeholders, customPlaceholderArray);
-            }
-
-            // merge with custom ones
-            if(getExtensions){
-                let customExtensionsArray = await getExtensions(req);
-                templateExtensions = ArrayTools.merge(templateExtensions, customExtensionsArray);
             }
 
             return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (match, key) => {
@@ -127,6 +119,7 @@ export default class ExpressStarter {
                 return found ? found[1]() : '';
             });
         }
+
 
         this.app.use(async (req, res, next) => {
             let reqPath = req.path === '/' ? '/index.html' : req.path;
