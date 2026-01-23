@@ -125,7 +125,14 @@ export default class ExpressStarter {
             let reqPath = req.path === '/' ? '/index.html' : req.path;
             const ext = path.extname(reqPath).toLowerCase();
 
-            if (!templateExtensions.includes(ext)) return next();
+            let extensions = [...templateExtensions];
+
+            if (getExtensions) {
+                let customExtensionsArray = await getExtensions(req);
+                extensions = ArrayTools.merge(extensions, customExtensionsArray);
+            }
+
+            if (!extensions.includes(ext)) return next();
 
             const fullPath = path.join(publicWebDir, reqPath);
 
