@@ -91,63 +91,76 @@ export default class ExpressStarter {
     }
 
     registerTemplateMiddleware({
-                                   publicWebDir = null,
-                                   getExtensions = null,
                                    getPlaceholders = null
                                } = {}) {
-
-        // set defaults
-        if(!publicWebDir) publicWebDir = path.join(this.dirname, "public")
-        if(!fs.existsSync(publicWebDir)) fs.mkdirSync(publicWebDir, {recursive: true});
-        let templateExtensions = ['.html', '.js']
-
         const renderTemplate = async (template, req) => {
-            let query = req.query;
-
             let placeholders = [
                 ["version", () => this.version],
                 ["random", () => this.generateId(12)],
             ];
 
             if (getPlaceholders) {
-                let customPlaceholderArray = await getPlaceholders(req);
-                placeholders = ArrayTools.merge(placeholders, customPlaceholderArray);
+                const customPlaceholders = await getPlaceholders(req);
+                placeholders = [...placeholders, ...customPlaceholders];
             }
 
-            return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (match, key) => {
-                const found = placeholders.find(([name]) => name === key);
-                return found ? found[1]() : '';
-            });
-        }
+            for (const [name, callback] of placeholders) {
+                let value = typeof callback === "function"
+                    ? await callback()
+                    : callback;
 
-
-        this.app.use(async (req, res, next) => {
-            let reqPath = req.path === '/' ? '/index.html' : req.path;
-            const ext = path.extname(reqPath).toLowerCase();
-
-            let extensions = [...templateExtensions];
-
-            if (getExtensions) {
-                let customExtensionsArray = await getExtensions(req);
-                extensions = ArrayTools.merge(extensions, customExtensionsArray);
+                template = template.replace(
+                    new RegExp(`{{\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*}}`, "g"),
+                    String(value ?? "")
+                );
             }
 
-            if (!extensions.includes(ext)) return next();
+            return template;
+        };
 
-            const fullPath = path.join(publicWebDir, reqPath);
+        this.app.use((req, res, next) => {
+            const originalWrite = res.write.bind(res);
+            const originalEnd = res.end.bind(res);
 
-            fs.readFile(fullPath, 'utf8', async (err, content) => {
-                if (err) return next();
+            let chunks = [];
 
-                const rendered = await renderTemplate(content, req);
-                const contentType = {
-                    '.html': 'text/html',
-                    '.js': 'application/javascript',
-                }[ext] || 'text/plain';
+            res.write = (chunk, encoding, callback) => {
+                if (chunk) {
+                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
+                }
 
-                res.setHeader('Content-Type', contentType);
-                res.send(rendered);
-            });
+                if (callback) callback();
+
+                return true;
+            };
+
+            res.end = async (chunk, encoding, callback) => {
+                if (chunk) {
+                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
+                }
+
+                const body = Buffer.concat(chunks);
+                const contentType = res.getHeader("Content-Type")?.toString() ?? "";
+
+                const shouldTemplate =
+                    contentType.includes("text/") ||
+                    contentType.includes("javascript") ||
+                    contentType.includes("json") ||
+                    contentType.includes("xml");
+
+                if (shouldTemplate) {
+                    const rendered = await renderTemplate(body.toString("utf8"), req);
+
+                    res.removeHeader("Content-Length");
+
+                    originalEnd(rendered, "utf8", callback);
+                    return;
+                }
+
+                originalEnd(body, callback);
+            };
+
+            next();
         });
     }
 }
