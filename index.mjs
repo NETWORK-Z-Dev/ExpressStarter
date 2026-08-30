@@ -91,8 +91,16 @@ export default class ExpressStarter {
     }
 
     registerTemplateMiddleware({
+                                   publicWebDir = null,
+                                   urlPrefix = "",
+                                   getExtensions = null,
                                    getPlaceholders = null
                                } = {}) {
+        if(!publicWebDir) publicWebDir = path.join(this.dirname, "public")
+        if(!fs.existsSync(publicWebDir)) fs.mkdirSync(publicWebDir, {recursive: true});
+
+        let templateExtensions = ['.html', '.js']
+
         const renderTemplate = async (template, req) => {
             let placeholders = [
                 ["version", () => this.version],
@@ -100,67 +108,55 @@ export default class ExpressStarter {
             ];
 
             if (getPlaceholders) {
-                const customPlaceholders = await getPlaceholders(req);
-                placeholders = [...placeholders, ...customPlaceholders];
+                let customPlaceholderArray = await getPlaceholders(req);
+                placeholders = ArrayTools.merge(placeholders, customPlaceholderArray);
             }
 
-            for (const [name, callback] of placeholders) {
-                let value = typeof callback === "function"
-                    ? await callback()
-                    : callback;
+            return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (match, key) => {
+                const found = placeholders.find(([name]) => name === key);
+                return found ? found[1]() : '';
+            });
+        }
 
-                template = template.replace(
-                    new RegExp(`{{\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*}}`, "g"),
-                    String(value ?? "")
-                );
+        this.app.use(async (req, res, next) => {
+            let reqPath = req.path;
+
+            if(urlPrefix && !reqPath.startsWith(urlPrefix)) return next();
+
+            if(urlPrefix) {
+                reqPath = reqPath.slice(urlPrefix.length);
             }
 
-            return template;
-        };
+            if(reqPath === "/" || reqPath === "") {
+                reqPath = "/index.html";
+            }
 
-        this.app.use((req, res, next) => {
-            const originalWrite = res.write.bind(res);
-            const originalEnd = res.end.bind(res);
+            const ext = path.extname(reqPath).toLowerCase();
 
-            let chunks = [];
+            let extensions = [...templateExtensions];
 
-            res.write = (chunk, encoding, callback) => {
-                if (chunk) {
-                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
-                }
+            if (getExtensions) {
+                let customExtensionsArray = await getExtensions(req);
+                extensions = ArrayTools.merge(extensions, customExtensionsArray);
+            }
 
-                if (callback) callback();
+            if (!extensions.includes(ext)) return next();
 
-                return true;
-            };
+            const fullPath = path.join(publicWebDir, reqPath);
 
-            res.end = async (chunk, encoding, callback) => {
-                if (chunk) {
-                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
-                }
+            fs.readFile(fullPath, 'utf8', async (err, content) => {
+                if (err) return next();
 
-                const body = Buffer.concat(chunks);
-                const contentType = res.getHeader("Content-Type")?.toString() ?? "";
+                const rendered = await renderTemplate(content, req);
 
-                const shouldTemplate =
-                    contentType.includes("text/") ||
-                    contentType.includes("javascript") ||
-                    contentType.includes("json") ||
-                    contentType.includes("xml");
+                const contentType = {
+                    '.html': 'text/html',
+                    '.js': 'application/javascript',
+                }[ext] || 'text/plain';
 
-                if (shouldTemplate) {
-                    const rendered = await renderTemplate(body.toString("utf8"), req);
-
-                    res.removeHeader("Content-Length");
-
-                    originalEnd(rendered, "utf8", callback);
-                    return;
-                }
-
-                originalEnd(body, callback);
-            };
-
-            next();
+                res.setHeader('Content-Type', contentType);
+                res.send(rendered);
+            });
         });
     }
 }
