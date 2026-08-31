@@ -91,16 +91,8 @@ export default class ExpressStarter {
     }
 
     registerTemplateMiddleware({
-                                   publicWebDir = null,
-                                   urlPrefix = "",
-                                   getExtensions = null,
                                    getPlaceholders = null
                                } = {}) {
-        if(!publicWebDir) publicWebDir = path.join(this.dirname, "public")
-        if(!fs.existsSync(publicWebDir)) fs.mkdirSync(publicWebDir, {recursive: true});
-
-        let templateExtensions = ['.html', '.js']
-
         const renderTemplate = async (template, req) => {
             let placeholders = [
                 ["version", () => this.version],
@@ -108,55 +100,67 @@ export default class ExpressStarter {
             ];
 
             if (getPlaceholders) {
-                let customPlaceholderArray = await getPlaceholders(req);
-                placeholders = ArrayTools.merge(placeholders, customPlaceholderArray);
+                const customPlaceholders = await getPlaceholders(req);
+                placeholders = [...placeholders, ...customPlaceholders];
             }
 
-            return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (match, key) => {
-                const found = placeholders.find(([name]) => name === key);
-                return found ? found[1]() : '';
-            });
-        }
+            for (const [name, callback] of placeholders) {
+                let value = typeof callback === "function"
+                    ? await callback()
+                    : callback;
 
-        this.app.use(async (req, res, next) => {
-            let reqPath = req.path;
-
-            if(urlPrefix && !reqPath.startsWith(urlPrefix)) return next();
-
-            if(urlPrefix) {
-                reqPath = reqPath.slice(urlPrefix.length);
+                template = template.replace(
+                    new RegExp(`{{\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*}}`, "g"),
+                    String(value ?? "")
+                );
             }
 
-            if(reqPath === "/" || reqPath === "") {
-                reqPath = "/index.html";
-            }
+            return template;
+        };
 
-            const ext = path.extname(reqPath).toLowerCase();
+        this.app.use((req, res, next) => {
+            const originalWrite = res.write.bind(res);
+            const originalEnd = res.end.bind(res);
 
-            let extensions = [...templateExtensions];
+            let chunks = [];
 
-            if (getExtensions) {
-                let customExtensionsArray = await getExtensions(req);
-                extensions = ArrayTools.merge(extensions, customExtensionsArray);
-            }
+            res.write = (chunk, encoding, callback) => {
+                if (chunk) {
+                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
+                }
 
-            if (!extensions.includes(ext)) return next();
+                if (callback) callback();
 
-            const fullPath = path.join(publicWebDir, reqPath);
+                return true;
+            };
 
-            fs.readFile(fullPath, 'utf8', async (err, content) => {
-                if (err) return next();
+            res.end = async (chunk, encoding, callback) => {
+                if (chunk) {
+                    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
+                }
 
-                const rendered = await renderTemplate(content, req);
+                const body = Buffer.concat(chunks);
+                const contentType = res.getHeader("Content-Type")?.toString() ?? "";
 
-                const contentType = {
-                    '.html': 'text/html',
-                    '.js': 'application/javascript',
-                }[ext] || 'text/plain';
+                const shouldTemplate =
+                    contentType.includes("text/") ||
+                    contentType.includes("javascript") ||
+                    contentType.includes("json") ||
+                    contentType.includes("xml");
 
-                res.setHeader('Content-Type', contentType);
-                res.send(rendered);
-            });
+                if (shouldTemplate) {
+                    const rendered = await renderTemplate(body.toString("utf8"), req);
+
+                    res.removeHeader("Content-Length");
+
+                    originalEnd(rendered, "utf8", callback);
+                    return;
+                }
+
+                originalEnd(body, callback);
+            };
+
+            next();
         });
     }
 }
