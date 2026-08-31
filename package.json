@@ -1,7 +1,6 @@
 {
-<<<<<<< HEAD
     "name": "@hackthedev/express-starter",
-    "version": "1.0.8",
+    "version": "1.0.6",
     "description": "This library's purpose is to get rid of the default structure you usually need and create when trying to get an express server up and running in NodeJS. It works so well in fact that you can get a server up and running with only a few lines of code, as many default variables will handle the most basic setup.",
     "homepage": "https://github.com/NETWORK-Z-Dev/ExpressStarter#readme",
     "bugs": {
@@ -27,32 +26,3 @@
         "socket.io": "^4.8.3"
     }
 }
-=======
-  "name": "@hackthedev/express-starter",
-  "version": "1.0.8",
-  "description": "This library's purpose is to get rid of the default structure you usually need and create when trying to get an express server up and running in NodeJS. It works so well in fact that you can get a server up and running with only a few lines of code, as many default variables will handle the most basic setup.",
-  "homepage": "https://github.com/NETWORK-Z-Dev/ExpressStarter#readme",
-  "bugs": {
-    "url": "https://github.com/NETWORK-Z-Dev/ExpressStarter/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/NETWORK-Z-Dev/ExpressStarter.git"
-  },
-  "license": "ISC",
-  "author": "",
-  "main": "index.mjs",
-  "directories": {
-    "doc": "docs"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "dependencies": {
-    "@hackthedev/arraytools": "^1.0.2",
-    "@hackthedev/terminal-logger": "^1.0.0",
-    "express": "^5.2.1",
-    "socket.io": "^4.8.3"
-  }
-}
->>>>>>> 8f919dd992518df5db52a1861c7d93bc7e713a45
