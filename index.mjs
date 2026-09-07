@@ -15,9 +15,18 @@ export default class ExpressStarter {
         this.app = express();
         this.express = express;
         this.http = http;
+        this.server = http.createServer(this.app);
 
         process.stdin.resume();
         process.stdin.setEncoding("utf8");
+    }
+
+    getServerInfo(){
+        return {
+            server: this.server,
+            app: this.app,
+            express: this.express,
+        }
     }
 
     registerErrorHandlers(){
@@ -54,11 +63,9 @@ export default class ExpressStarter {
     }
 
     startHttpServer(port, onStarted = null){
-        Logger.info("Starting HTTP Server on port " + port);
-
-        this.server = http.createServer(this.app);
+        Logger.debug("Starting HTTP Server on port " + port);
         this.server.listen(port, async function () {
-            Logger.success("Server is running on port " + port);
+            Logger.debug("Server is running on port " + port);
             if(onStarted) await onStarted();
         })
     }
